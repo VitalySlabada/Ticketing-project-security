@@ -1,0 +1,18 @@
+version: 3.7
+services:
+  mypostgres:
+    image:postgres
+    container_name: mypostgres
+    ports:
+      - "5432:5432"
+    restart: always
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "admin"
+      POSTGRES_DB: "ticketing-app"
+    networks:
+      - webnet
+volumes:
+networks:
+  webnet:
+    driver: bridge
