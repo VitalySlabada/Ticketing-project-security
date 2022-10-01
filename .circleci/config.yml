@@ -1,26 +1,60 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/2.0/configuration-reference
-version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
-jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-    docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
-    steps:
-      - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+  version: 2
+  jobs:
+    build:
+      docker:
+        # specify the version you desire here
+        - image: circleci/openjdk:11-jdk
+      working_directory: /tmp/workspace
+      steps:
+        - checkout
+        - run: mkdir -p /tmp/workspace
+        # Download and cache dependencies - dont change restore /save cache steps
+        - restore_cache:
+            keys:
+              - v1-dependencies-{{ checksum "pom.xml" }}
+              # fallback to using the latest cache if no exact match is found
+              - v1-dependencies-
+          # run + unit tests
+        - run: mvn clean install -DskipTests
+        - save_cache:
+            paths:
+              - ~/.m2
+            key: v1-dependencies-{{ checksum "pom.xml" }}
+          # define persist to workspace first, do attach_workspace: for other jobs
+        - persist_to_workspace:
+            root: /tmp/workspace
+            paths: .
+    docker-image-and-publish:
+      machine: true
+      steps:
+        - attach_workspace:
+            at: /tmp/workspace
+        - run: ls -a /tmp/workspace
+        - run:
+            name: Create Docker image and push to ECR
+            command: aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 289073749577.dkr.ecr.eu-west-2.amazonaws.com && docker build -t ticketinapp /tmp/workspace && docker tag ticketinapp:latest 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest && docker push 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest
+    deploy-job:
+      docker:
+        #specify the version you desire here
+        - image: circleci/node:10.0.0
+      steps:
+        - run:
+            name: Execute Deployment Script
+            command: |
+              ssh -o "StrictHostKeyChecking=no" ec2-user@ec2-13-41-193-175.eu-west-2.compute.amazonaws.com <<'ENDSSH'
+              /bin/bash bin/deploy_image.sh
+              docker ps
+  workflows:
+    version: 2
+    build_and_test:
+      #define the order here:
+      jobs:
+        - build
+        - docker-image-and-publish:
+            requires:
+              - build
+        - deploy-job:
+            requires:
+              - docker-image-and-publish
 
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-workflows:
-  say-hello-workflow:
-    jobs:
-      - say-hello
