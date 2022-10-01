@@ -15,7 +15,7 @@
               - v1-dependencies-{{ checksum "pom.xml" }}
               # fallback to using the latest cache if no exact match is found
               - v1-dependencies-
-          # run + unit tests
+          # run + unit tests -> DSkipTests - no tests
         - run: mvn clean install -DskipTests
         - save_cache:
             paths:
@@ -25,6 +25,7 @@
         - persist_to_workspace:
             root: /tmp/workspace
             paths: .
+
     docker-image-and-publish:
       machine: true
       steps:
@@ -34,6 +35,8 @@
         - run:
             name: Create Docker image and push to ECR
             command: aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 289073749577.dkr.ecr.eu-west-2.amazonaws.com && docker build -t ticketinapp /tmp/workspace && docker tag ticketinapp:latest 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest && docker push 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest
+
+    #gets an image from ECR(repo) and puts on ec2
     deploy-job:
       docker:
         #specify the version you desire here
@@ -41,8 +44,9 @@
       steps:
         - run:
             name: Execute Deployment Script
+            #can define the steps in a separate file -> .sh file in cd /home/ec2-user/bin/.. on ec2
             command: |
-              ssh -o "StrictHostKeyChecking=no" ec2-user@ec2-13-41-193-175.eu-west-2.compute.amazonaws.com <<'ENDSSH'
+              ssh -o "StrictHostKeyChecking=no" ec2-user@ec2-18-118-111-127.us-east-2.compute.amazonaws.com <<'ENDSSH'
               /bin/bash bin/deploy_image.sh
               docker ps
   workflows:
@@ -58,3 +62,29 @@
             requires:
               - docker-image-and-publish
 
+
+
+
+#notes:
+#  create .sh in cd /home/ec2-user/bin/ and put the following in it:
+#  #Check for running container & stop it before starting a new one
+#  docker stop ticketinapp
+#  docker rmi ticketinapp
+#  docker rm ticketinapp
+#  aws configure set aws_access_key_id AKIAUGTRDLZE4SXTSCXZ
+#  aws configure set aws_secret_access_key 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
+#  aws configure set default.region eu-west-2
+#  aws ecr aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 289073749577.dkr.ecr.eu-west-2.amazonaws.com
+#  echo "Pulling latest Image name: 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest"
+#  docker pull 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp
+#  echo "Starting sing Docker Image name: 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest"
+#  #docker run --rm -d ${DOCKER_OPTS} --name ticketinapp 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp:latest
+#  docker run -d -p 8080:8080 --name ticketinapp 289073749577.dkr.ecr.eu-west-2.amazonaws.com/ticketinapp
+#  echo "Cleaning old docker images"
+#  #docker rmi $(docker images -f dangling=true -q)
+#  if [[ $(docker images | grep ticketinapp | grep none | awk '{print $3}') ]]; then
+#  docker rmi $(docker images | grep ticketinapp | grep none | awk '{print $3}')
+#  else
+#  echo "No old images found"
+#  fi
+#  docker ps -a
