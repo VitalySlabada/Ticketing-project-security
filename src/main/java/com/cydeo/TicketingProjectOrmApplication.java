@@ -24,5 +24,4 @@ public class TicketingProjectOrmApplication {
 	public PasswordEncoder passwordEncoder(){
 		return new BCryptPasswordEncoder();
 	}
-
 }
