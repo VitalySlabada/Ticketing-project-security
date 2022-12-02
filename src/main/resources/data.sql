@@ -16,3 +16,4 @@ values  ('2021-01-05 00:00:00', 1, false, '2021-01-05 00:00:00', 1, true, 'admin
         2,'$2a$10$nAB5j9G1c3JHgg7qzhiIXO7cqqr5oJ3LXRNQJKssDUwHXzDGUztNK');
 
 -- Abc1
+-- test ci/cd
