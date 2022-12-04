@@ -68,6 +68,7 @@
 
 
 
+
 #notes:
 #  create .sh in cd /home/ec2-user/bin/ and put the following in it:
 #  #Check for running container & stop it before starting a new one
