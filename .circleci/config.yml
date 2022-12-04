@@ -49,8 +49,10 @@
             #can define the steps in a separate file -> .sh file in cd /home/ec2-user/bin/.. on ec2
             command: |
               ssh -o "StrictHostKeyChecking=no" ec2-user@ec2-3-137-137-107.us-east-2.compute.amazonaws.com <<'ENDSSH'
-              /bin/bash bin/deploy_image.sh
+              /bin/deploy_image.sh
               docker ps
+              ssh -o "StrictHostKeyChecking=no" ec2-user@ec2-18-118-111-127.us-east-2.compute.amazonaws.com <<'ENDSSH'
+              
 
   workflows:
     version: 2
